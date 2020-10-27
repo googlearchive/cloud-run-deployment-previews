@@ -18,7 +18,6 @@ FROM gcr.io/google.com/cloudsdktool/cloud-sdk:slim
 
 ENV APP_HOME /app
 WORKDIR $APP_HOME
-ENV CLOUD_SDK_REPO 315.0.0
 COPY . .
 RUN pip3 install --upgrade pip
 RUN pip3 install -r requirements.txt
