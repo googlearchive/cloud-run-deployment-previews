@@ -50,7 +50,6 @@ steps:
         "--region",
         "${_REGION}",
       ]
-
   # Cleanup tags against closed pull requests
   - name: "gcr.io/${PROJECT_ID}/deployment-previews"
     args:

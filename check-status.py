@@ -16,6 +16,7 @@
 
 import re
 import sys
+import subprocess
 
 import click
 from github import Github
@@ -158,6 +159,8 @@ def cleanup(dry_run, project_id, region, service, repo_name, ghtoken_secretname)
     except GithubException as e:
         error(e.data["message"], context=f"finding repo {repo_name}")
 
+    tags_to_delete = []
+
     for rev in revs:
         tag = rev["tag"]
         pr = get_pr(tag)
@@ -169,15 +172,35 @@ def cleanup(dry_run, project_id, region, service, repo_name, ghtoken_secretname)
                     f"PR {pr} is closed, so would remove tag {tag} on service {service}"
                 )
             else:
-                # TODO delete the tag on the service
-                click.echo(
-                    f"TODO: PR {pr} is closed, so remove tag {tag} on service {service}"
-                )
-                click.echo("TODO(glasnt): Implementation")
-        else:
-            click.echo(
-                f"Tag {tag} on service {service} for PR {pr} still valid: PR is open."
-            )
+                tags_to_delete.append(tag)
+
+    if tags_to_delete:
+        tags = ",".join(tags_to_delete)
+        # FIX(b/171669848): use discovery API
+        # Fork out to the gcloud CLI to programatically delete tags from closed PRs               
+        click.echo(f"Forking out to gcloud to remove tags: {tags}")
+        subprocess.run(
+            [
+                "gcloud",
+                "beta",
+                "run",
+                "services",
+                "update-traffic",
+                service,
+                "--platform",
+                "managed",
+                "--region",
+                region,
+                "--project",
+                project_id,
+                "--remove-tags",
+                tags,
+            ],
+            check=True,
+        )
+
+    else:
+        click.echo("Did not identify any tags to delete.")
 
 
 @cli.command()
