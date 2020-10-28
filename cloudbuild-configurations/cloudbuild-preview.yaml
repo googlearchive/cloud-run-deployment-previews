@@ -13,7 +13,8 @@
 # limitations under the License.
 
 steps:
-  - name: "gcr.io/cloud-builders/docker"
+  - id: "build image"
+    name: "gcr.io/cloud-builders/docker"
     args:
       [
         "build",
@@ -22,14 +23,16 @@ steps:
         ".",
       ]
 
-  - name: "gcr.io/cloud-builders/docker"
+  - id: "push image"
+    name: "gcr.io/cloud-builders/docker"
     args:
       [
         "push",
         "gcr.io/${PROJECT_ID}/${_SERVICE_NAME}:${_PR_NUMBER}-${SHORT_SHA}",
       ]
 
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+  - id: "deploy revision"
+    name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: "gcloud"
     args:
       [
@@ -48,7 +51,8 @@ steps:
         "--no-traffic",
       ]
 
-  - name: "gcr.io/${PROJECT_ID}/deployment-previews"
+  - id: "link revision on pull request"
+    name: "gcr.io/${PROJECT_ID}/deployment-previews"
     args:
       [
         "set",
