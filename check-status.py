@@ -209,6 +209,7 @@ def cleanup(dry_run, project_id, region, service, repo_name, ghtoken_secretname)
 @add_options(_github_options)
 @click.option("--pull-request", required=True, help="GitHub Pull Request ID", type=int)
 @click.option("--commit-sha", required=True, help="GitHub commit (SHORT_SHA)")
+# [START run_deployment-preview_setstatus]
 def set(
     dry_run,
     project_id,
@@ -257,7 +258,7 @@ def set(
         click.echo(
             f"Status created on {repo_name}, commit {sha.sha[:7]}, linking to {revision_url} on service {service}"
         )
-
+# [END run_deployment-preview_setstatus]
 
 if __name__ == "__main__":
     cli()
