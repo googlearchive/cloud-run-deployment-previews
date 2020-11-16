@@ -19,11 +19,11 @@ import sys
 import subprocess
 
 import click
-from github import Github
+import github
 from github.GithubException import GithubException
 from google.api_core.exceptions import NotFound
 from google.cloud import secretmanager
-from googleapiclient.discovery import build
+from googleapiclient import discovery
 from googleapiclient.errors import HttpError
 
 TAG_PREFIX = "pr-"
@@ -83,7 +83,7 @@ def error(msg, context=None):
 
 def get_service(project_id, region, service_name):
     """Get the Cloud Run service object"""
-    api = build("run", "v1")
+    api = discovery.build("run", "v1")
     fqname = f"projects/{project_id}/locations/{region}/services/{service_name}"
     try:
         service = api.projects().locations().services().get(name=fqname).execute()
@@ -92,14 +92,14 @@ def get_service(project_id, region, service_name):
     return service
 
 
-def get_revision_url(service, tag):
+def get_revision_url(service_obj, tag):
     """Get the revision URL for the tag specified on the service"""
-    for revision in service["status"]["traffic"]:
+    for revision in service_obj["status"]["traffic"]:
         if revision.get("tag", None) == tag:
             return revision["url"]
 
     error(
-        f"Tag on service {service} does not exist.",
+        f"Tag on service {service_obj['metadata']['name']} does not exist.",
         context=f"finding revision tagged {tag}",
     )
 
@@ -155,7 +155,7 @@ def cleanup(dry_run, project_id, region, service, repo_name, ghtoken_secretname)
     ghtoken = github_token(project_id, ghtoken_secretname)
 
     try:
-        repo = Github(ghtoken).get_repo(repo_name)
+        repo = github.Github(ghtoken).get_repo(repo_name)
     except GithubException as e:
         error(e.data["message"], context=f"finding repo {repo_name}")
 
@@ -177,7 +177,7 @@ def cleanup(dry_run, project_id, region, service, repo_name, ghtoken_secretname)
     if tags_to_delete:
         tags = ",".join(tags_to_delete)
         # FIX(b/171669848): use discovery API
-        # Fork out to the gcloud CLI to programatically delete tags from closed PRs               
+        # Fork out to the gcloud CLI to programatically delete tags from closed PRs
         click.echo(f"Forking out to gcloud to remove tags: {tags}")
         subprocess.run(
             [
@@ -229,12 +229,12 @@ def set(
     ghtoken = github_token(project_id, ghtoken_secretname)
 
     try:
-        repo = Github(ghtoken).get_repo(repo_name)
+        repo = github.Github(ghtoken).get_repo(repo_name)
     except GithubException as e:
         error(e.data["message"], context=f"finding repo {repo_name}")
 
     try:
-        sha = repo.get_commit(sha=commit_sha)
+        commit = repo.get_commit(sha=commit_sha)
     except GithubException as e:
         error(e.data["message"], context=f"finding commit {commit_sha}")
 
@@ -242,13 +242,14 @@ def set(
         click.secho("Dry-run: ", fg="blue", bold=True, nl=False)
         click.echo(
             (
-                f"Status would have been created on {repo_name}, "
-                f"commit {sha.sha[:7]}, linking to {revision_url} on service {service}"
+                f"Status would have been created on {repo.repo_name}, "
+                f"commit {commit.sha[:7]}, linking to {revision_url} "
+                f"on service {service_obj['metadata']['name']}"
             )
         )
 
     else:
-        sha.create_status(
+        commit.create_status(
             state="success",
             target_url=revision_url,
             context="Deployment Preview",
@@ -256,8 +257,11 @@ def set(
         )
         click.secho("Success: ", fg="green", bold=True, nl=False)
         click.echo(
-            f"Status created on {repo_name}, commit {sha.sha[:7]}, linking to {revision_url} on service {service}"
+            f"Status created on {repo.repo_name}, commit {commit.sha[:7]}, "
+            f"linking to {revision_url} on service {service_obj['metadata']['name']}"
         )
+
+
 # [END run_deployment-preview_setstatus]
 
 if __name__ == "__main__":
