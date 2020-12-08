@@ -1,11 +1,3 @@
-# Cloud Run Deploy Previews
+# [Migrated] Cloud Run Deploy Previews
 
-This repo serves as the Cloud Builder code for the [Cloud Run deployment preview tutorial](#).
- 
-## Contributions
-
-Please see the [contributing guidelines](CONTRIBUTING.md)
-
-## License
-
-This library is licensed under Apache 2.0. Full license text is available in [LICENSE](LICENSE).
+The code for this sample has been migrated to the [Python Docs Samples](https://github.com/GoogleCloudPlatform/python-docs-samples/tree/master/run/deployment-previews) repository. 
